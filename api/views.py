@@ -26,7 +26,7 @@ class ReminderList(generics.ListCreateAPIView):
     serializer_class=serializers.ReminderSerializer
     # permission_classes=(IsAuthenticated,)
 
-class UserList(generics.ListCreateAPIView):
+class UserList(viewsets.ModelViewSet):
     queryset=User.objects.all()
     serializer_class=serializers.UserSerializer
 
