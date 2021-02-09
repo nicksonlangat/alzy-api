@@ -5,12 +5,11 @@ from .models import *
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'first_name', 'last_name', 'password')
-        extra_kwargs={'password': {'write_only':True, 'required':True}} 
-    
-    def create(self, validated_data): #overwrite built in create fn.
-        # create new instance of the model
-        user=User.objects.create(**validated_data)
+        fields = ('id', 'username', 'email', 'password')
+        extra_kwargs = {'password' : {'write_only': True, 'required': True}}
+
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
         return user
 
 class ReminderSerializer(serializers.ModelSerializer):

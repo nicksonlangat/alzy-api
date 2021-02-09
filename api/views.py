@@ -1,19 +1,23 @@
 from django.shortcuts import render
-from django.contrib.auth.models import User
-from rest_framework import viewsets, permissions,generics
-from . import serializers
-from . permissions import ReadOnly
-from rest_framework.authentication import TokenAuthentication
+from rest_framework import generics
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
+from rest_framework import viewsets, status
+from .serializers import *
 from .models import *
+from django.contrib.auth.models import User
 from django.http import HttpResponse
 
 # Create your views here.
+def index(request):
+    return render(request, 'index.html')
 
 class FileList(generics.ListCreateAPIView):
     queryset=File.objects.all()
-    serializer_class=serializers.FileSerializer
-
+    serializer_class=FileSerializer
     #lets overwrite post fn
     def post(self, request, *args, **kwargs):
         name=request.data['name']
@@ -23,20 +27,24 @@ class FileList(generics.ListCreateAPIView):
 
 class ReminderList(generics.ListCreateAPIView):
     queryset=Reminder.objects.all()
-    serializer_class=serializers.ReminderSerializer
+    serializer_class=ReminderSerializer
     # permission_classes=(IsAuthenticated,)
 
-class UserList(viewsets.ModelViewSet):
-    queryset=User.objects.all()
-    serializer_class=serializers.UserSerializer
+class UserView(generics.ListCreateAPIView):
+    queryset = User.objects.all().order_by('-date_joined')
+    serializer_class = UserSerializer
 
-class UserViewSet(viewsets.ModelViewSet):#class that handles all CRUD ops on the User model
-    queryset=User.objects.all().order_by('-date_joined')
-    serializer_class=serializers.UserSerializer
-    authentication_classes=(TokenAuthentication,)
-    permission_classes=(IsAuthenticated,)
-    # permission_classes=(ReadOnly)
-     
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all().order_by('-date_joined')
+    serializer_class = UserSerializer
+
+class CustomObtainAuthToken(ObtainAuthToken):
+    def post(self, request, *args, **kwargs):
+        response = super(CustomObtainAuthToken, self).post(request, *args, **kwargs)
+        token = Token.objects.get(key=response.data['token'])
+        user = User.objects.get(id=token.user_id)
+        serializer = UserSerializer(user, many=False)
+        return Response({'token': token.key, 'user': serializer.data})
 
 
 from rest_framework.parsers import FileUploadParser
@@ -48,7 +56,7 @@ class FileUploadView(APIView):
 
     def post(self, request, *args, **kwargs):
 
-      file_serializer = serializers.FileSerializer(data=request.data)
+      file_serializer = FileSerializer(data=request.data)
 
       if file_serializer.is_valid():
           file_serializer.save()
